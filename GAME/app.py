@@ -668,6 +668,64 @@ def submit_guess(data):
     schedule_bots(room)
 
 
+@socketio.on("stay_in_room")
+def stay_in_room():
+    sid = request.sid
+    room = next(
+        (r for r in rooms.values() if sid in r["humans"]), None
+    )
+
+    if not room or room["stage"] != "finished":
+        emit("error_message", "You can only return to the room after the tournament ends.")
+        return
+
+    # Keep the human players and room code, but reset the tournament.
+    for player_id in list(room["players"]):
+        player = room["players"][player_id]
+        if player["type"] == "bot":
+            room["players"].pop(player_id, None)
+        else:
+            player["secret"] = None
+            player["speed"] = float("inf")
+
+    room["stage"] = "lobby"
+    room["round"] = 0
+    room["active"] = []
+    room["matches"] = []
+    room["byes"] = []
+    room["history"] = []
+    room["message"] = "Back in the room! Waiting for the host to start another tournament."
+    room["champion"] = None
+    room["winner_ids"] = []
+    room["round_finish_started"] = False
+
+    send_state(room)
+
+
+@socketio.on("leave_room")
+def leave_room():
+    sid = request.sid
+
+    for code, room in list(rooms.items()):
+        if sid not in room["humans"]:
+            continue
+
+        room["humans"].remove(sid)
+        room["players"].pop(sid, None)
+
+        if not room["humans"]:
+            rooms.pop(code, None)
+        else:
+            if room["host_sid"] == sid:
+                room["host_sid"] = room["humans"][0]
+            send_state(room)
+
+        emit("left_room", to=sid)
+        return
+
+    emit("left_room", to=sid)
+
+
 @socketio.on("disconnect")
 def disconnect():
     sid = request.sid
