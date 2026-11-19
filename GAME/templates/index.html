@@ -358,8 +358,7 @@ h3 { font-size: 15px; }
     border-radius: 11px;
     padding: 13px;
 }
-
-.bracket-match .versus-line {
+    .bracket-match .versus-line {
     padding: 7px 0;
     border-bottom: 1px solid #26334a;
     font-size: 13px;
@@ -395,6 +394,30 @@ h3 { font-size: 15px; }
 
 .champion .trophy { font-size: 50px; }
 .champion h2 { color: var(--yellow); font-size: 25px; }
+
+.champion-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.champion-actions button {
+    width: auto;
+    min-width: 160px;
+}
+
+.leave-button {
+    background: #512536;
+    color: #ffe5eb;
+    padding: 13px 16px;
+    border-radius: 9px;
+    font-weight: 800;
+    letter-spacing: .5px;
+}
+
+.leave-button:hover { background: #713047; }
 
 @media (max-width: 760px) {
     .lobby-grid, .game-grid { grid-template-columns: 1fr; }
@@ -545,6 +568,11 @@ h3 { font-size: 15px; }
             <h2>TOURNAMENT CHAMPION</h2>
             <h1 id="championName" class="cyan"></h1>
             <p class="muted">NUMBER CLASH winner!</p>
+
+            <div class="champion-actions">
+                <button class="primary" onclick="stayInRoom()">STAY IN ROOM</button>
+                <button class="leave-button" onclick="leaveRoom()">LEAVE ROOM</button>
+            </div>
         </div>
     </div>
 
@@ -592,6 +620,14 @@ function startGame() {
     socket.emit("start_game");
 }
 
+function stayInRoom() {
+    socket.emit("stay_in_room");
+}
+
+function leaveRoom() {
+    socket.emit("leave_room");
+}
+
 function setSecret() {
     const number = document.getElementById("secretNumber").value;
 
@@ -635,6 +671,20 @@ socket.on("error_message", message => {
     toast(message);
 });
 
+socket.on("left_room", () => {
+    currentCode = "";
+    latestState = null;
+
+    document.getElementById("gameArea").style.display = "none";
+    document.getElementById("lobbyArea").style.display = "block";
+
+    document.getElementById("createName").value = "";
+    document.getElementById("joinName").value = "";
+    document.getElementById("joinCode").value = "";
+
+    toast("You left the room.");
+});
+
 socket.on("game_state", state => {
     latestState = state;
     myId = state.my_id;
@@ -667,7 +717,7 @@ function renderState(state) {
     renderBook(state);
 
     const isLobby = state.stage === "lobby";
-    const isChoosing = state.stage === "choosing";
+        const isChoosing = state.stage === "choosing";
     const isPlaying = state.stage === "playing";
     const isFinished = state.stage === "finished";
 
